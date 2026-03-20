@@ -23,6 +23,9 @@ RUN chmod +x /usr/local/bin/tod
 # Install Playwright system dependencies for Chromium (required by agent-browser)
 RUN npx playwright install-deps chromium
 
+# Corepack
+RUN corepack enable
+
 # 2. Configure the existing 'node' user
 # The node image usually creates the node user. We ensure it owns the app dir.
 WORKDIR /app

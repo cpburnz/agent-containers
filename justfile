@@ -1,3 +1,5 @@
+set unstable
+
 # Display available recipes.
 help:
 	@just -l
@@ -10,10 +12,12 @@ host_uid := shell('id -u')
 host_gid := shell('id -g')
 
 # Tools to install in to the containers with apt-get
-local_tools := "curl jq"
+local_tools := "ca-certificates curl jq"
 
-all: base claude-code openai-codex
+# Build all images.
+all: base open-code
 
+# Build base image.
 base:
 	@echo "Building base image"
 	{{container_engine}} build \
@@ -23,6 +27,7 @@ base:
 		-t agent-base \
 		-f base/Dockerfile base
 
+# Build open-code image.
 open-code: base
 	@echo "Building open-code"
 	{{container_engine}} build \
@@ -30,6 +35,7 @@ open-code: base
 		-t open-code \
 		-f open-code/Dockerfile open-code
 
+# Remove container images.
 clean:
 	@echo "Removing container images"
 	@for image in open-code agent-base; do \

@@ -1,3 +1,5 @@
+FROM docker.io/oven/bun:1 AS bun
+
 FROM node:24-slim
 
 ARG HOST_UID=1000
@@ -13,7 +15,7 @@ RUN apt-get update && \
 
 # Install Bun by copying from the official image
 # This installs bun globally to /usr/local/bin so it is available to everyone
-COPY --from=oven/bun:1 /usr/local/bin/bun /usr/local/bin/bun
+COPY --from=bun /usr/local/bin/bun /usr/local/bin/bun
 # Create the bunx symlink (standard practice)
 RUN ln -s /usr/local/bin/bun /usr/local/bin/bunx
 
@@ -46,9 +48,5 @@ RUN mkdir -p /home/node/.npm-global && \
 # 6. Bash Configuration
 # Add the path export to bashrc so interactive shells pick it up
 RUN echo "export PATH=${NPM_CONFIG_PREFIX}/bin:${BUN_INSTALL}/bin:\$PATH" >> /home/node/.bashrc
-
-# 7. Copy aliases to the 'node' user's home
-COPY --chown=node:node ./.bash_aliases /home/node/.bash_aliases
-RUN echo "if [ -f ~/.bash_aliases ]; then . ~/.bash_aliases; fi" >> /home/node/.bashrc
 
 CMD ["/bin/bash"]

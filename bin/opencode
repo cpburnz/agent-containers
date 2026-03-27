@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+#
+# Run OpenCode from the current directory.
+#
+# Copy this to "/usr/local/bin/".
+#
+set -e
+
+proj="$(basename "$(pwd)")"
+name="open-code-${proj}"
+
+if [ which podman 2>/dev/null ]; then
+	cont_engine=podman
+	host_cont_internal=host.containers.internal
+else
+	cont_engine=docker
+	host_cont_internal=host.docker.internal
+fi
+
+exec $cont_engine run --rm --tty --interactive \
+  --name "$name" \
+  --add-host=$host_cont_internal:host-gateway \
+  -v "$HOME/.local/state/opencode:/home/node/.local/state/opencode" \
+  -v "$HOME/.local/share/opencode:/home/node/.local/share/opencode" \
+  -v "$HOME/.config/opencode:/home/node/.config/opencode" \
+  -v "$(pwd):/app:rw" \
+  open-code "$@"

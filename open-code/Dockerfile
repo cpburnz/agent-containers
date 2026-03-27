@@ -2,7 +2,7 @@
 FROM agent-base AS builder
 
 # 1. Install global modules
-RUN bun install -g opencode-ai && \
+RUN npm install -g opencode-ai && \
 	echo "Installed Open Code version: $(opencode --version)"
 
 # Runtime stage

@@ -1,3 +1,11 @@
+This was forked from https://github.com/faileon/agent-containers which was
+forked from https://github.com/ianchesal/agent-containers.
+
+---
+
+TODO: Review everything below.
+
+
 # agent-containers
 
 A bunch of container-ed AI agents with some simple instructions for running
@@ -19,13 +27,13 @@ launch these containers.
 To build all the containers:
 
 ```bash
-make all
+just all
 ```
 
 To build any specific container use the directory name. For example:
 
 ```bash
-make claude-code
+just open-code
 ```
 
 ### Architecture
@@ -36,8 +44,7 @@ Tool-specific images extend this base with their unique requirements:
 
 ```
 agent-base
-├── claude-code
-└── openai-codex
+├── open-code
 ```
 
 Each Dockerfile uses multi-stage builds to:
@@ -51,20 +58,14 @@ Each Dockerfile uses multi-stage builds to:
 The build system supports caching control options:
 
 ```bash
-# Build all containers (base, claude-code, openai-codex)
-make all
+# Build all containers (base, open-code, etc.)
+just all
 
 # Build just the base image
-make base
+just base
 
 # Build a specific tool (automatically builds base if needed)
-make claude-code
-
-# Build without cache
-make claude-code DISABLE_CACHE=1
-
-# Build using a specific image as cache source
-make claude-code CACHE_FROM=claude-code:latest
+just open-code
 ```
 
 ### Cleaning
@@ -73,10 +74,10 @@ To remove built images:
 
 ```bash
 # Remove images but preserve build cache
-make clean
+just clean
 
 # Remove images and prune build cache older than 24h
-make deep-clean
+just deep-clean  # DO NOT EXIST!
 ```
 
 ## Running
@@ -115,7 +116,3 @@ Put those some place in your `.zshrc` or `.bashrc` file and you'll be able to
 launch the agent in a working directory with a call to `claude` or `codex`. You
 can test they work by getting a bash shell in them with `claude bash` or
 `claude codex`.
-
-## See Also
-
-* [My dotfiles](https://github.com/ianchesal/dotfiles)

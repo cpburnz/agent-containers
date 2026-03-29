@@ -1,28 +1,23 @@
-# Build stage
-FROM agent-base AS builder
+#
+# Build stage.
+#
+FROM dhi.io/node:24-dev as build
+USER node
+WORKDIR /build
 
-# 1. Install global modules
-RUN npm install -g opencode-ai && \
-	echo "Installed Open Code version: $(opencode --version)"
+# Download opencode (latest version).
+RUN npm install opencode-linux-x64 --ignore-scripts && \
+	echo "Installed Open Code version: $(node_modules/opencode-linux-x64/bin/opencode --version)"
 
-# Runtime stage
-FROM agent-base
+#
+# Runtime stage.
+#
+FROM localhost/agent-base
+USER node
 
-# Copy the installed global modules from builder
-COPY --from=builder --chown=node:node /home/node/.npm-global /home/node/.npm-global
+# Copy opencode.
+COPY --from=build --chmod=755 /build/node_modules/opencode-linux-x64/bin/opencode /usr/bin/opencode
 
-# Copy and configure the entrypoint script
-COPY --chown=node:node --chmod=755 entrypoint.sh /home/node/entrypoint.sh
-
-# Display version information
-RUN echo "" && \
-	echo "\e[34m=================================================================\e[0m" && \
-	echo "\e[34m                        OPEN CODE VERSION                        \e[0m" && \
-	echo "\e[34m=================================================================\e[0m" && \
-	echo "\e[34m" && opencode --version && \
-	echo "\e[0m" && \
-	echo ""
-
-# Route container startup through our script
-ENTRYPOINT ["/home/node/entrypoint.sh"]
+# Run opencode.
+WORKDIR /app
 CMD ["opencode"]

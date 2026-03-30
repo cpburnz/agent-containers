@@ -9,25 +9,23 @@ set -e
 proj="$(basename "$(pwd)")"
 name="open-code-${proj}"
 
-# Determine engine.
-if which podman 2>/dev/null; then
-	engine=podman
-	engine_args='--add-host=host.containers.internal:host-gateway --userns=keep-id:uid=1000,gid=1000'
-else
-	engine=docker
-	engine_args=--add-host=host.docker.internal:host-gateway
-fi
-
 # Create mounted directories.
 mkdir -p "$HOME/.config/opencode"
 mkdir -p "$HOME/.local/share/opencode"
 mkdir -p "$HOME/.local/state/opencode"
 
-exec $engine run --rm --tty --interactive \
+exec podman run --rm --tty --interactive \
   --name "$name" \
-  $engine_args \
+  --userns=keep-id:uid=1000,gid=1000 \
+  --add-host=host.containers.internal:host-gateway \
   -v "$HOME/.config/opencode:/home/node/.config/opencode" \
   -v "$HOME/.local/share/opencode:/home/node/.local/share/opencode" \
   -v "$HOME/.local/state/opencode:/home/node/.local/state/opencode" \
   -v "$(pwd):/app" \
   open-code "$@"
+
+# TODO
+# --network agent-net
+# -e HTTPS_PROXY=http://10.89.0.1:3128 \
+# -e HTTP_PROXY=http://10.89.0.1:3128 \
+# -e NO_PROXY=localhost,127.0.0.1 \

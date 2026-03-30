@@ -4,10 +4,6 @@ set unstable
 help:
 	@just -l
 
-# UID/GID
-host_uid := shell('id -u')
-host_gid := shell('id -g')
-
 # Build all images.
 all: base open-code
 

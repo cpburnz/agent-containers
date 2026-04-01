@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+#
+# Run Squid to proxy and restrict network access for agent containers.
+#
+set -e
+
+exec podman run --rm -it \
+	--net agent-net \
+	--net agent-internal-net \
+	agent-squid-proxy

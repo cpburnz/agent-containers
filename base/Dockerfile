@@ -1,34 +1,25 @@
 #
+# This Dockerfile creates the base agent image.
+#
+# NOTICE: The hardened images such as "dhi.io/node:24" are too cumbersome to
+# work with. There's no easy solution to install packages, and then harden.
+# OpenCode gave strange errors about needing "tar" to run its glob and grep
+# tools.
+#
+
+#
 # Build stage.
 #
-FROM dhi.io/node:24-dev as build
+#FROM node:24-trixie-slim
 
-# Install build-time packages.
-RUN apt-get update && \
-	apt-get install -y --no-install-recommends xz-utils && \
-	rm -rf /var/lib/apt/lists/*
-
-# Setup directories.
-RUN mkdir -p /build && \
-	mkdir -p /empty && touch /empty/.stub
-
-# Download curl.
-WORKDIR /build/curl
-ADD 'https://github.com/stunnel/static-curl/releases/download/8.19.0/curl-linux-x86_64-glibc-8.19.0.tar.xz' ./
-RUN tar -xJf curl-linux-x86_64-glibc-8.19.0.tar.xz && \
-	echo '6f7947edef5dc66fab1de22e4c41fa4dfac70edf94044b09ce62132582b6e048  curl' | sha256sum -c
+# Nothing to do.
 
 #
 # Runtime stage.
 #
-FROM dhi.io/node:24
-
-# Copy curl.
-COPY --from=build --chmod=755 /build/curl/curl /usr/bin/curl
-
-# Setup app directory.
-COPY --from=build --chown=node /empty /app
+FROM node:24-trixie-slim
 
 # Setup node user directories.
-COPY --from=build --chown=node /empty /home/node/.config
-COPY --from=build --chown=node /empty /home/node/.local
+RUN install -o node -g node -d /app && \
+	install -o node -g node -d /home/node/.config && \
+	install -o node -g node -d /home/node/.local

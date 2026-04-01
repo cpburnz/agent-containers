@@ -7,25 +7,57 @@
 set -e
 
 proj="$(basename "$(pwd)")"
-name="open-code-${proj}"
+name="agent-opencode-${proj}"
+proxy_name="$name-proxy"
+
+# Get XDG directories.
+host_config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+host_data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+host_state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
+
+# Create squid proxy.
+if ! podman container exists "$proxy_name"; then
+	# Create mounted directories.
+	mkdir -p "$host_data_home/agent-containers/proxy/log/opencode"
+
+	# Squid runs as proxy (uid=13, gid=13) in Debian. Fix permissions.
+	podman unshare chown 13:13 "$host_data_home/agent-containers/proxy/log/opencode"
+
+	podman create \
+		--name "$proxy_name" \
+		--net agent-internal-net \
+		--net agent-net \
+		-v "$host_config_home/agent-containers/proxy/access.conf:/etc/squid/access.conf:ro" \
+		-v "$host_config_home/agent-containers/proxy/ports.conf:/etc/squid/ports.conf:ro" \
+		-v "$host_data_home/agent-containers/proxy/log/opencode:/var/log/squid:rw" \
+		localhost/agent-squid-proxy
+fi
+
+# Start squid proxy.
+podman start "$proxy_name"
+
+# Lookup proxy IP.
+proxy_ip="$(podman container inspect "$proxy_name" | jq -er '.[0].NetworkSettings.Networks["agent-internal-net"].IPAddress')"
+proxy="http://$proxy_ip:3128"
+if [ -z "$proxy_ip" ]; then
+	exit "Failed to get $proxy_name ip."
+fi
 
 # Create mounted directories.
-mkdir -p "$HOME/.config/opencode"
-mkdir -p "$HOME/.local/share/opencode"
-mkdir -p "$HOME/.local/state/opencode"
+mkdir -p "$host_config_home/opencode"
+mkdir -p "$host_data_home/opencode"
+mkdir -p "$host_state_home/opencode"
 
-exec podman run --rm --tty --interactive \
-  --name "$name" \
-  --userns=keep-id:uid=1000,gid=1000 \
-  --add-host=host.containers.internal:host-gateway \
-  -v "$HOME/.config/opencode:/home/node/.config/opencode" \
-  -v "$HOME/.local/share/opencode:/home/node/.local/share/opencode" \
-  -v "$HOME/.local/state/opencode:/home/node/.local/state/opencode" \
-  -v "$(pwd):/app" \
-  open-code "$@"
-
-# TODO
-# --network agent-net
-# -e HTTPS_PROXY=http://10.89.0.1:3128 \
-# -e HTTP_PROXY=http://10.89.0.1:3128 \
-# -e NO_PROXY=localhost,127.0.0.1 \
+# Run OpenCode.
+exec podman run --rm -it \
+	--name "$name" \
+	--net agent-internal-net \
+	--userns=keep-id:uid=1000,gid=1000 \
+	-e "HTTPS_PROXY=$proxy" \
+	-e "HTTP_PROXY=$proxy" \
+	-e NO_PROXY=localhost,127.0.0.1 \
+	-v "$host_config_home/opencode:/home/node/.config/opencode" \
+	-v "$host_data_home/opencode:/home/node/.local/share/opencode" \
+	-v "$host_state_home/opencode:/home/node/.local/state/opencode" \
+	-v "$(pwd):/app" \
+	agent-opencode "$@"

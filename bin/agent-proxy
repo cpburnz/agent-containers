@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+#
+# Run Squid to proxy and restrict network access for agent containers.
+#
+# Copy this to "/usr/local/bin/".
+#
+set -e
+
+# Get XDG directories.
+host_config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
+host_data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
+
+# Create mounted directories.
+mkdir -p "$host_data_home/agent-containers/proxy/log"
+
+# Squid runs as the proxy user (uid=13, gid=13) in Debian. Fix owner.
+podman unshare chown 13:13 "$host_data_home/agent-containers/proxy/log"
+
+# Start Squid agent proxy.
+podman run --rm -d --replace \
+	--name agent-proxy \
+	--net agent-internal-net \
+	--net agent-net \
+	-v "$host_config_home/agent-containers/proxy/access.conf:/etc/squid/access.conf:ro" \
+	-v "$host_config_home/agent-containers/proxy/ports.conf:/etc/squid/ports.conf:ro" \
+	-v "$host_data_home/agent-containers/proxy/log:/var/log/squid:rw" \
+	localhost/agent-squid-proxy
+
+# Tail access log.
+exec podman exec agent-proxy tail -F /var/log/squid/access.log

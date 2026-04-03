@@ -8,42 +8,22 @@ set -e
 
 proj="$(basename "$(pwd)")"
 name="agent-opencode-${proj}"
-proxy_name="$name-proxy"
 
 # Get XDG directories.
+host_cache_home="${XDG_CACHE_HOME:-$HOME/.cache}"
 host_config_home="${XDG_CONFIG_HOME:-$HOME/.config}"
 host_data_home="${XDG_DATA_HOME:-$HOME/.local/share}"
 host_state_home="${XDG_STATE_HOME:-$HOME/.local/state}"
 
-# Create squid proxy.
-if ! podman container exists "$proxy_name"; then
-	# Create mounted directories.
-	mkdir -p "$host_data_home/agent-containers/proxy/log/opencode"
-
-	# Squid runs as proxy (uid=13, gid=13) in Debian. Fix permissions.
-	podman unshare chown 13:13 "$host_data_home/agent-containers/proxy/log/opencode"
-
-	podman create \
-		--name "$proxy_name" \
-		--net agent-internal-net \
-		--net agent-net \
-		-v "$host_config_home/agent-containers/proxy/access.conf:/etc/squid/access.conf:ro" \
-		-v "$host_config_home/agent-containers/proxy/ports.conf:/etc/squid/ports.conf:ro" \
-		-v "$host_data_home/agent-containers/proxy/log/opencode:/var/log/squid:rw" \
-		localhost/agent-squid-proxy
-fi
-
-# Start squid proxy.
-podman start "$proxy_name"
-
 # Lookup proxy IP.
-proxy_ip="$(podman container inspect "$proxy_name" | jq -er '.[0].NetworkSettings.Networks["agent-internal-net"].IPAddress')"
+proxy_ip="$(podman container inspect agent-proxy | jq -er '.[0].NetworkSettings.Networks["agent-internal-net"].IPAddress')"
 proxy="http://$proxy_ip:3128"
 if [ -z "$proxy_ip" ]; then
-	exit "Failed to get $proxy_name ip."
+	exit "Failed to get agent-proxy ip."
 fi
 
 # Create mounted directories.
+mkdir -p "$host_cache_home/opencode"
 mkdir -p "$host_config_home/opencode"
 mkdir -p "$host_data_home/opencode"
 mkdir -p "$host_state_home/opencode"
@@ -56,8 +36,9 @@ exec podman run --rm -it \
 	-e "HTTPS_PROXY=$proxy" \
 	-e "HTTP_PROXY=$proxy" \
 	-e NO_PROXY=localhost,127.0.0.1 \
+	-v "$host_cache_home/opencode:/home/node/.cache/opencode" \
 	-v "$host_config_home/opencode:/home/node/.config/opencode" \
 	-v "$host_data_home/opencode:/home/node/.local/share/opencode" \
 	-v "$host_state_home/opencode:/home/node/.local/state/opencode" \
 	-v "$(pwd):/app" \
-	agent-opencode "$@"
+	localhost/agent-opencode "$@"

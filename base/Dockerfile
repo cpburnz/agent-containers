@@ -10,7 +10,7 @@
 #
 # Build stage.
 #
-#FROM node:24-trixie-slim
+#FROM node:24-trixie-slim as build
 
 # Nothing to do.
 
@@ -21,5 +21,6 @@ FROM node:24-trixie-slim
 
 # Setup node user directories.
 RUN install -o node -g node -d /app && \
+	install -o node -g node -d /home/node/.cache && \
 	install -o node -g node -d /home/node/.config && \
 	install -o node -g node -d /home/node/.local

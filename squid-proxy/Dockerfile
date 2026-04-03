@@ -22,4 +22,4 @@ COPY squid.conf /etc/squid/squid.conf
 USER proxy
 EXPOSE 3128
 WORKDIR /run/squid
-ENTRYPOINT ["/entrypoint.sh"]
+CMD ["/entrypoint.sh"]

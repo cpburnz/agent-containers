@@ -6,27 +6,34 @@
 # Build stage.
 #
 FROM node:24-trixie-slim as build
-USER node
-WORKDIR /build
+ENV OPENSPEC_NO_COMPLETIONS=1
+ENV OPENSPEC_TELEMETRY=0
 
-# Download opencode (latest version).
-RUN npm install opencode-linux-x64 --ignore-scripts && \
-	echo "Installed OpenCode version: $(node_modules/opencode-linux-x64/bin/opencode --version)"
+# Install opencode node packages.
+USER node
+ENV NPM_CONFIG_PREFIX=/home/node/.npm-global
+RUN npm install -g opencode-ai @fission-ai/openspec
 
 #
 # Runtime stage.
 #
 FROM localhost/agent-base
+USER root
+ENV OPENSPEC_TELEMETRY=0
 
-# Install runtime-time packages.
+# Install system packages.
 RUN apt-get update && \
-	apt-get install -y --no-install-recommends curl && \
+	apt-get install -y --no-install-recommends ca-certificates curl jq && \
 	rm -rf /var/lib/apt/lists/*
 
-# Copy opencode.
-COPY --from=build --chmod=755 /build/node_modules/opencode-linux-x64/bin/opencode /usr/bin/opencode
+# Copy opencode node packages.
+COPY --from=build /home/node/.npm-global /usr/local
+
+# Configure NPM.
+USER node
+ENV NPM_CONFIG_PREFIX=/opt/node
+ENV PATH=$NPM_CONFIG_PREFIX/bin:$PATH
 
 # Run opencode.
-USER node
 WORKDIR /app
-ENTRYPOINT ["opencode"]
+CMD ["opencode"]

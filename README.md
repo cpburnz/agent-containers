@@ -1,6 +1,75 @@
 This was forked from https://github.com/faileon/agent-containers which was
 forked from https://github.com/ianchesal/agent-containers.
 
+
+
+## Limit Network Access
+
+{{ TODO: This section needs to be coherent, not just random notes. }}
+
+{{ TODO: Look into replacing Squid with https://github.com/ironsh/iron-proxy }}
+
+Network access can be limited in the container by requiring *squid* to be used
+as a proxy.
+
+Create two networks, *agent-net* and *agent-internal-net*:
+
+```bash
+podman network create agent-net
+podman network create --internal agent-internal-net
+```
+
+
+
+The squid access log can be tailed using:
+
+```bash
+podman exec agent-proxy tail -f /var/log/squid/access.log
+```
+
+
+
+
+
+
+Find its gateway IP address:
+
+```bash
+podman network inspect agent-net | jq -r '.[0].subnets[0].gateway'
+```
+
+This should give an IP similar to:
+
+```
+10.89.0.1
+```
+
+{{ TODO: squid }}
+
+Useful proxy commands:
+```
+podman exec agent-proxy squid -k reconfigure
+```
+
+Exposing ports from localhost to the agent containers requires a relay (such as
+socat).
+
+```
+podman run -d \
+	--name local-8081-relay \
+	--network agent-net \
+	docker.io/alpine/socat \
+	TCP-LISTEN:80,fork,reuseaddr \
+	TCP:host.containers.internal:8081
+```
+
+This will allow "http://local-8081-relay" to be used from the agent container,
+and will map to "http://localhost:8081".
+
+
+
+
+
 ---
 
 TODO: Review everything below.
